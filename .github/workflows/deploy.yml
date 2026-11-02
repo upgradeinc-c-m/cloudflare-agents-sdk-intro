@@ -1,0 +1,66 @@
+# Cloudflare へのデプロイ。wrangler.jsonc が Worker・Durable Object・AI バインディングの定義(IaC)で、
+# このワークフローはそれを `wrangler deploy` で適用するだけ。
+#
+# 必要なリポジトリシークレット:
+#   CLOUDFLARE_API_TOKEN  : テンプレート「Edit Cloudflare Workers」で作成した API トークン
+#   CLOUDFLARE_ACCOUNT_ID : デプロイ先アカウントの ID(複数アカウントに所属している場合は必須)
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "デプロイするディレクトリ"
+        type: choice
+        options: [my-agent, counter-agent]
+        default: my-agent
+  push:
+    branches: [main]
+    paths:
+      - "my-agent/**"
+      - "counter-agent/**"
+      - ".github/workflows/deploy.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: [counter-agent, my-agent]
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ${{ matrix.dir }}/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test --if-present
+      - run: npx wrangler deploy --dry-run
+
+  deploy:
+    needs: check
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: cloudflare
+    defaults:
+      run:
+        working-directory: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ${{ inputs.target }}/package-lock.json
+      - run: npm ci
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: ${{ inputs.target }}
+          command: deploy
