@@ -8,7 +8,7 @@ Cloudflare Agents SDK(`agents` 0.32)で AI エージェントを作る最小構�
 - インフラは各ディレクトリの `wrangler.jsonc` が定義します(Worker、Durable Object、AI バインディング)。別途 Terraform などは使いません
 - GitHub Actions(`.github/workflows/deploy.yml`)で型チェック・テスト・dry-run を行い、手動実行で `wrangler deploy` します
 
-設計と検証の経緯は Zenn の記事「Cloudflare Agents SDKでAIエージェントを作ってみた(Durable Object入門)」にまとめています。
+設計と検証の経緯は Zenn の記事「Cloudflare Agents SDKでAIエージェントを作ってみた」にまとめています。
 
 ## 構成
 
